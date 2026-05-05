@@ -18,7 +18,7 @@ public class PlatinumMember extends Member {
 
     @Override
     public String getMembershipLevel() {
-        return "Platinum";
+        return "PLATINUM";
     }
 
     
