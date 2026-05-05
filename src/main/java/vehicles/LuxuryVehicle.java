@@ -1,6 +1,7 @@
 package vehicles;
 
 import interfaces.Rentable;
+import members.Member;
 
 public abstract class LuxuryVehicle implements Rentable {
 
@@ -32,5 +33,24 @@ public abstract class LuxuryVehicle implements Rentable {
 
     public String getVehicleInfo() {
         return brand + " " + model + " (" + vehicleId + ")";
+    }
+
+    public boolean canBeRentedBy(Member member) {
+    String memberLevel = member.getMembershipLevel();
+    String requiredLevel = membershipRequired;
+
+        if (requiredLevel.equals("STANDARD")) {
+        return true;
+        }
+
+        if (requiredLevel.equals("GOLD")) {
+        return memberLevel.equals("GOLD") || memberLevel.equals("PLATINUM");
+        }
+
+        if (requiredLevel.equals("PLATINUM")) {
+        return memberLevel.equals("PLATINUM");
+        }
+
+        return false;
     }
 }

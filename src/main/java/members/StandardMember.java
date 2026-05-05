@@ -1,14 +1,14 @@
 package members;
 
-public class GoldMember extends Member {
+public class StandardMember extends Member {
 
-    public GoldMember(String memberId, String name) {
+    public StandardMember(String memberId, String name) {
         super(memberId, name);
     }
 
     @Override
     public double getDiscount(double amount) {
-        return amount * 0.05;
+        return 0; // no discount
     }
 
     @Override
@@ -18,8 +18,9 @@ public class GoldMember extends Member {
 
     @Override
     public String getMembershipLevel() {
-        return "GOLD";
+        return "STANDARD";
     }
+
 
     
 }

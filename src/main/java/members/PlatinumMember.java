@@ -15,4 +15,11 @@ public class PlatinumMember extends Member {
     public boolean canAccessExclusive() {
         return true;
     }
+
+    @Override
+    public String getMembershipLevel() {
+        return "Platinum";
+    }
+
+    
 }

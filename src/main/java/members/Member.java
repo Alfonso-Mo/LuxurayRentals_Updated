@@ -12,6 +12,8 @@ public abstract class Member {
 
     public abstract double getDiscount(double amount);
     public abstract boolean canAccessExclusive();
+    public abstract String getMembershipLevel();
+    
 
     public String getMemberId() { return memberId; }
     public String getName() { return name; }

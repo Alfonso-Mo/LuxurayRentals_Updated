@@ -12,6 +12,7 @@ import ui.components.VehicleCard;
 import ui.views.FleetBrowserView;
 import members.PlatinumMember;
 import members.Member;
+import members.StandardMember;
 import booking.Booking;
 import ui.NavigationManager;
 
@@ -41,7 +42,7 @@ public class VehicleDetailView extends VBox {
         }
 
         VBox rightSide = new VBox(20);
-        rightSide.setPrefWidth(400);
+        rightSide.setPrefWidth(600);
 
         Label vehicleTitle = new Label(vehicle.getBrand() + " " + vehicle.getModel());
         vehicleTitle.setStyle("-fx-font-size: 30px; -fx-font-weight: bold;");
@@ -75,24 +76,51 @@ public class VehicleDetailView extends VBox {
         memberLabel.setStyle("-fx-font-weight: bold;");
 
         ToggleGroup memberGroup = new ToggleGroup();
-        RadioButton goldBtn     = new RadioButton("Gold  (5% discount)");
+
+        RadioButton standardBtn = new RadioButton("Standard  (*NO* discount)");
+        RadioButton goldBtn = new RadioButton("Gold  (5% discount)");
         RadioButton platinumBtn = new RadioButton("Platinum  (10% discount)");
+
+        
+        standardBtn.setToggleGroup(memberGroup);
         goldBtn.setToggleGroup(memberGroup);
         platinumBtn.setToggleGroup(memberGroup);
-        goldBtn.setSelected(true);
 
-        HBox memberOptions = new HBox(20, goldBtn, platinumBtn);
+        String required = vehicle.getMembershipRequired();
+
+        if (required.equals("STANDARD")) {
+            standardBtn.setSelected(true);
+        } else if (required.equals("GOLD")) {
+            standardBtn.setDisable(true);
+            goldBtn.setSelected(true);
+        } else if (required.equals("PLATINUM")) {
+            standardBtn.setDisable(true);
+            goldBtn.setDisable(true);
+            platinumBtn.setSelected(true);
+        }
+
+        HBox memberOptions = new HBox(10, standardBtn, goldBtn, platinumBtn);
 
         // Update price preview when membership or slider changes
         Runnable updatePrice = () -> {
             int hours = selectedHours[0];
             double base = vehicle.calculateRentalCost(hours);
-            Member preview = platinumBtn.isSelected()
-                ? new PlatinumMember("M002", "Preview")
-                : new GoldMember("M001", "Preview");
+
+        Member preview;
+
+        if (platinumBtn.isSelected()) {
+            preview = new PlatinumMember("M002", "Preview");
+        } else if (goldBtn.isSelected()) {
+            preview = new GoldMember("M001", "Preview");
+        } else {
+            preview = new StandardMember("M000", "Preview");
+        }
+
             double total = base - preview.getDiscount(base);
             pricePreview.setText("Estimated Total: $" + String.format("%.2f", total));
         };
+
+        updatePrice.run();
 
         slider.valueProperty().addListener((obs, old, val) -> {
             int hours = val.intValue();
@@ -101,6 +129,7 @@ public class VehicleDetailView extends VBox {
             updatePrice.run();
         });
 
+        standardBtn.setOnAction(e -> updatePrice.run());
         goldBtn.setOnAction(e -> updatePrice.run());
         platinumBtn.setOnAction(e -> updatePrice.run());
 
@@ -117,45 +146,51 @@ public class VehicleDetailView extends VBox {
                 return;
             }
 
-            Member member = platinumBtn.isSelected()
-                ? new PlatinumMember("M002", "Member")
-                : new GoldMember("M001", "Member");
+            Member member;
+
+            if (platinumBtn.isSelected()) {
+                member = new PlatinumMember("M002", "Member");
+            } else if (goldBtn.isSelected()) {
+                member = new GoldMember("M001", "Member");
+            } else {
+                member = new StandardMember("M000", "Member");
+            }
+
+            if (!vehicle.canBeRentedBy(member)) {
+                Alert alert = new Alert(Alert.AlertType.WARNING);
+                alert.setTitle("Membership Required");
+                alert.setHeaderText(null);
+                alert.setContentText("This vehicle requires a " + vehicle.getMembershipRequired() + " membership.");
+                alert.showAndWait();
+                return;
+            }
 
             double base = vehicle.calculateRentalCost(selectedHours[0]);
             double discount = member.getDiscount(base);
             double total = base - discount;
 
-            // Swap form for a receipt summary
             bookingForm.getChildren().clear();
 
             Label receiptTitle = new Label("Booking Summary");
             receiptTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
 
-            Separator sep1 = new Separator();
-
             bookingForm.getChildren().addAll(
                 receiptTitle,
-                sep1,
-                receiptRow("Vehicle",    vehicle.getBrand() + " " + vehicle.getModel()),
-                receiptRow("Type",       vehicle.getClass().getSimpleName()),
-                receiptRow("Membership", member.getClass().getSimpleName()),
-                receiptRow("Duration",   selectedHours[0] + " hour(s)"),
-                receiptRow("Base Price", "$" + String.format("%.2f", base)),
-                receiptRow("Discount",   "-$" + String.format("%.2f", discount)),
                 new Separator(),
-                receiptRow("Total",      "$" + String.format("%.2f", total))
+                receiptRow("Vehicle", vehicle.getBrand() + " " + vehicle.getModel()),
+                receiptRow("Type", vehicle.getClass().getSimpleName()),
+                receiptRow("Membership", member.getClass().getSimpleName()),
+                receiptRow("Duration", selectedHours[0] + " hour(s)"),
+                receiptRow("Base Price", "$" + String.format("%.2f", base)),
+                receiptRow("Discount", "-$" + String.format("%.2f", discount)),
+                new Separator(),
+                receiptRow("Total", "$" + String.format("%.2f", total))
             );
-
-            // Style the total row bold
-            if (bookingForm.getChildren().get(bookingForm.getChildren().size() - 1) instanceof HBox totalRow) {
-                totalRow.getChildren().forEach(node -> {
-                    if (node instanceof Label lbl) lbl.setStyle("-fx-font-weight: bold; -fx-font-size: 15px;");
-                });
-            }
 
             Button confirmBtn = new Button("Confirm Booking");
             confirmBtn.getStyleClass().add("button-primary");
             confirmBtn.setMaxWidth(Double.MAX_VALUE);
+
             confirmBtn.setOnAction(ev -> {
                 Booking booking = new Booking(member, vehicle, selectedHours[0], "");
                 FleetBrowserView.activeBookings.put(vehicle.getVehicleId(), booking);
